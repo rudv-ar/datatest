@@ -1,7 +1,7 @@
 ![dendec-logo](./assets/dendec.jpg)
 
 
-**DNA Encode and Decode** — Password-based encrypted Unicode to DNA encoding, Shortly known as dendec is a cli tool for steganographic obfuscation alongside with encryption. This will give you a DNA sequence which can be synthesized via `dendec refer` (comming soon) to point out to real genomic databases. Data is already present, you would just need coordinates and password.
+**DNA Encode and Decode** — Password-based encrypted Unicode to DNA encoding. Shortly known as dendec, it is a CLI tool for steganographic obfuscation alongside production-grade cryptography. Output is a DNA sequence visually indistinguishable from real genomic data. Via `dendec refer` (coming soon), that sequence can be synthesised into coordinates pointing to real genomic databases — the data was always there, you just need the coordinates and a password.
 
 The world's first general-purpose DNA-native encrypted data format. Your data becomes a sequence of nucleotide bases. Locked behind production-grade cryptography. Indistinguishable from genomic output. Decodable only with `dendec` and the correct password.
 
@@ -39,7 +39,7 @@ Under the surface it is cryptographically serious:
 ### From source
 
 ```bash
-git clone https://github.com/dendec/dendec
+git clone https://github.com/rudv-ar/dendec
 cd dendec
 cargo build --release
 ```
@@ -81,19 +81,169 @@ Grouping is cosmetic only. The decoder strips whitespace automatically.
 dendec decode "ATGCTAGCAT..."
 ```
 
-### Encode a file via shell
+### Encode a file — binary-safe
 
 ```bash
-dendec encode "$(cat file.txt)" > file.txt.dna
+dendec encode --file src/main.rs --as main.rs.dna
 ```
 
-> [!WARNING]
-> Shell command substitution via `$()` strips trailing newlines from file content. Use the `--file` flag (coming soon) for binary-safe file encoding that preserves exact byte content.
+Reads raw bytes directly from disk. Every byte — including trailing newlines and binary content — is preserved exactly. No shell substitution mangling.
 
-### Decode a file
+### Decode a file — binary-safe
 
 ```bash
-dendec decode "$(cat file.txt.dna)"
+dendec decode --file main.rs.dna --as main.rs
+```
+
+Writes raw bytes directly to the output file. Byte-for-byte identical to the original.
+
+### Verify a roundtrip
+
+```bash
+dendec encode --file src/main.rs --as main.rs.dna
+dendec decode --file main.rs.dna --as restored.rs
+diff src/main.rs restored.rs
+# empty — perfect roundtrip
+```
+
+> [!NOTE]
+> The `--as` flag writes output directly to a named file and prints a confirmation line to stderr. Without `--as`, output goes to stdout.
+
+
+## &#xe91c; wrap — Protocol-Agnostic Batch Transform
+
+`dendec wrap` intercepts the output of any shell command and applies a DNA transform to every appropriate file it produces. Directory structure is preserved exactly. Binary files are detected and skipped automatically. One password covers the entire operation — each file still gets its own random salt and nonce internally.
+
+### Encode a local directory
+
+```bash
+dendec wrap -e ./myproject
+```
+
+Walks the entire directory tree, encodes every readable file to `.dna` in place, removes the originals.
+
+```
+  Scanning ./myproject...
+
+Encoding 15 file(s)...
+
+  Encoding ./myproject/src/main.rs...      ok  (1.8 KB → 7.2 KB)
+  Encoding ./myproject/src/lib.rs...       ok  (0.9 KB → 3.6 KB)
+  Encoding ./myproject/Cargo.toml...       ok  (312 B → 1.2 KB)
+  Encoding ./myproject/README.md...        ok  (4.1 KB → 16.4 KB)
+  Skipping ./myproject/assets/logo.png     (binary)
+
+  15 files encoded  |  1 skipped  |  0 failed
+```
+
+### Decode a local directory
+
+```bash
+dendec wrap -d ./myproject
+```
+
+Walks the directory, finds every `.dna` file, decodes each one back to its original bytes, removes the `.dna` file. The directory is restored to its exact pre-encode state.
+
+### Wrap a git clone — encode
+
+```bash
+dendec wrap -e git clone https://github.com/user/repo
+```
+
+Snapshots the working directory, runs the clone, diffs the filesystem to find exactly what was produced, then encodes every readable file in the cloned directory. Push the result anywhere — it looks like a genomics data repository.
+
+### Wrap a git clone — decode
+
+```bash
+dendec wrap -d git clone https://github.com/user/repo
+```
+
+Clones a repository containing `.dna` files and decodes them all in place. The result is the original working source tree.
+
+### Wrap curl — file output
+
+```bash
+dendec wrap -d curl -o config.toml.dna https://example.com/config.toml.dna
+```
+
+curl writes to disk, the snapshot diff detects it, dendec decodes it.
+
+### Wrap curl — stdout capture
+
+```bash
+dendec wrap -d curl https://example.com/file.rs.dna
+```
+
+dendec captures stdout from curl and decodes it directly without touching the filesystem.
+
+### What wrap skips automatically
+
+Binary files are detected by content inspection. The first 512 bytes are sampled using the same heuristic git uses. The following are always skipped regardless:
+
+- `.git/` directory
+- `target/` directory
+- `node_modules/`, `.svn/`, `.hg/`
+- Known binary extensions: `png jpg jpeg gif bmp ico webp tiff pdf zip tar gz bz2 xz wasm exe dll so dylib mp3 mp4 wav ogg flac avi mkv mov db sqlite pyc class`
+- Files containing null bytes
+- Files where more than 10% of sampled bytes are non-printable
+
+
+## &#xe91c; Live Example — rudv-ar/datatest
+
+The repository at `https://github.com/rudv-ar/datatest` is a live demonstration of dendec wrap in action. It holds the full dendec source tree in both DNA-encoded and plaintext form side by side for direct comparison.
+
+```
+datatest/
+├── dendec.dna/                  ← full dendec source, DNA-encoded (password: rust)
+│   ├── Cargo.lock.dna
+│   ├── Cargo.toml.dna
+│   ├── LICENSE.dna
+│   ├── readme.md.dna
+│   ├── assets/
+│   │   └── dendec.jpg           ← binary, skipped by wrap automatically
+│   ├── src/
+│   │   ├── main.rs.dna
+│   │   ├── cli.rs.dna
+│   │   ├── crypto.rs.dna
+│   │   ├── dna.rs.dna
+│   │   ├── encoding.rs.dna
+│   │   ├── error.rs.dna
+│   │   └── wrap/
+│   │       ├── mod.rs.dna
+│   │       ├── classify.rs.dna
+│   │       ├── fetch.rs.dna
+│   │       ├── snapshot.rs.dna
+│   │       └── transform.rs.dna
+│   └── src.backup/
+│       └── *.dna
+└── dendec.plaintext/            ← original source for verification
+    ├── Cargo.lock
+    ├── Cargo.toml
+    └── src/
+        └── ...
+```
+
+### Clone and decode
+
+```bash
+git clone https://github.com/rudv-ar/datatest
+dendec wrap -d ./datatest/dendec.dna
+# Enter password: rust
+```
+
+### Verify against plaintext
+
+```bash
+diff -r datatest/dendec.plaintext datatest/dendec.dna
+# empty — byte-for-byte identical after decode
+```
+
+### Or clone and decode in a single command
+
+```bash
+dendec wrap -d git clone https://github.com/rudv-ar/datatest
+# Enter password: rust
+# All .dna files inside datatest/ are decoded in place
 ```
 
 
@@ -102,10 +252,10 @@ dendec decode "$(cat file.txt.dna)"
 ### Encode pipeline
 
 ```
-Unicode text
+Input (text or raw bytes from file)
     │
     ▼
-UTF-8 bytes
+UTF-8 bytes or raw binary
     │
     ▼
 Argon2id(password, random_salt)
@@ -125,7 +275,7 @@ Binary packet: [DNDC][v1][salt 16B][nonce 12B][payload_len 8B][ciphertext]
 2 bits per base: 00→X  01→X  10→X  11→X  (X determined by mapping table)
     │
     ▼
-Output: GCATCGATCGGCTAGC...
+Output: GCATCGATCGGCTAGC...  (to stdout or --as file)
 ```
 
 ### Binary header format
@@ -143,12 +293,12 @@ Offset   Length   Field
 41       N        Ciphertext            (payload + 16 byte MAC)
 ```
 
-Everything required for decryption lives inside the DNA string itself. No sidecar files. No external configuration. The sequence is the complete artifact.
+Everything required for decryption lives inside the DNA string itself. No sidecar files. No external configuration. No key exchange. The sequence is the complete artifact.
 
 ### Decode pipeline
 
 ```
-DNA string
+DNA string or .dna file
     │
     ▼
 Strip whitespace and grouping separators
@@ -180,11 +330,11 @@ ChaCha20-Poly1305 decrypt and verify MAC
     └── corrupted data    → MAC mismatch → DecryptionFailed error
     │
     ▼
-String::from_utf8 ──► original text
+Raw bytes → file (--as) or UTF-8 text → stdout
 ```
 
 > [!NOTE]
-> The bootstrap loop tries at most 24 permutations. For each candidate it runs Argon2id once to verify the mapping. In practice the correct permutation is found on the first or second attempt. The upper bound is 24 Argon2id invocations which remains under 30 seconds on typical hardware.
+> The bootstrap loop tries at most 24 permutations. For each candidate it runs Argon2id once to verify the mapping. In practice the correct permutation is found on the first or second attempt. The upper bound is 24 Argon2id invocations, well under 30 seconds on typical hardware.
 
 
 ## &#xe32a; Security
@@ -234,12 +384,18 @@ dendec/
 ├── LICENSE
 ├── README.md
 └── src/
-    ├── main.rs        Entry point. CLI dispatch and password prompts. No crypto logic.
-    ├── cli.rs         clap v4 derive API. Subcommand and flag definitions.
-    ├── crypto.rs      Argon2id KDF. ChaCha20-Poly1305 encrypt and decrypt. Mapping derivation.
-    ├── encoding.rs    Binary header format. Full encode and decode pipeline. Bootstrap logic.
-    ├── dna.rs         Bit-level bytes to DNA and DNA to bytes conversion. Grouping utility.
-    └── error.rs       Custom error enum via thiserror. No panics in production paths.
+    ├── main.rs          Entry point. CLI dispatch and password prompts. No crypto logic.
+    ├── cli.rs           clap v4 derive API. Subcommand and flag definitions.
+    ├── crypto.rs        Argon2id KDF. ChaCha20-Poly1305 encrypt and decrypt. Mapping derivation.
+    ├── encoding.rs      Binary header format. Full encode and decode pipeline. Bootstrap logic.
+    ├── dna.rs           Bit-level bytes to DNA and DNA to bytes conversion. Grouping utility.
+    ├── error.rs         Custom error enum via thiserror. No panics in production paths.
+    └── wrap/
+        ├── mod.rs       Orchestration. Local dir shortcut. Git clone narrowing. Stdout capture.
+        ├── snapshot.rs  Filesystem snapshot and diff. Detects exactly what a command produced.
+        ├── classify.rs  Binary detection. Skip rules. Extension logic.
+        ├── transform.rs Batch encode/decode. Per-file progress. Summary report.
+        └── fetch.rs     Subprocess execution. Disk vs stdout detection. Git clone parsing.
 ```
 
 
@@ -253,6 +409,8 @@ dendec/
 | `rand` | 0.8 | Cryptographically secure salt and nonce generation |
 | `chacha20poly1305` | 0.10 | ChaCha20-Poly1305 AEAD encryption |
 | `thiserror` | 1 | Ergonomic custom error types |
+| `walkdir` | 2 | Recursive directory traversal for wrap |
+| `tempfile` | 3 | Temporary directories in tests (dev only) |
 
 
 ## &#xe877; Tests
@@ -261,7 +419,7 @@ dendec/
 cargo test
 ```
 
-18 tests across two modules:
+33 tests across five modules:
 
 ```
 dna::tests
@@ -278,17 +436,38 @@ dna::tests
 encoding::tests
   test_encode_decode_ascii
   test_encode_decode_emoji
+  test_encode_raw_roundtrip
+  test_raw_binary_roundtrip
   test_wrong_password_fails
-  test_corrupted_dna_fails
   test_grouped_output_decodes
   test_different_passwords_produce_different_dna
   test_same_password_different_each_time
+  test_corrupted_dna_fails
   test_unicode_newlines_tabs
   test_all_permutations_count
+
+wrap::snapshot::tests
+  test_new_file_detected
+  test_unchanged_file_not_in_diff
+  test_empty_dir_snapshot
+
+wrap::classify::tests
+  test_dna_file_skipped_in_encode
+  test_non_dna_skipped_in_decode
+  test_dna_file_decoded_in_decode
+  test_git_dir_excluded
+  test_binary_extension_skipped
+  test_text_file_encoded
+  test_null_byte_is_binary
+
+wrap::transform::tests
+  test_encode_decode_file_roundtrip
+  test_strip_dna_extension
+  test_human_size
 ```
 
 > [!NOTE]
-> The test suite takes approximately 80 seconds to complete. This is expected and correct. Each encode and decode operation pays the full Argon2id cost. Reduced test times would indicate the KDF is not functioning as intended.
+> The test suite takes approximately 80 seconds to complete. This is expected and correct. Each encode and decode operation in the encoding tests pays the full Argon2id cost. Reduced test times would indicate the KDF is not functioning as intended.
 
 
 ## &#xe0b7; The Bigger Vision
@@ -297,17 +476,19 @@ dendec is the core of a three-layer architecture.
 
 ### Layer 1 — dendec core — `stable`
 
-Password-encrypted data serialised as A/T/G/C bases. Fully implemented, tested, and documented.
+Password-encrypted data serialised as A/T/G/C bases. Fully implemented, tested, and documented. Supports inline text, binary-safe file I/O via `--file` and `--as`, and grouped terminal output.
 
-### Layer 2 — dendec wrap — `in development`
+### Layer 2 — dendec wrap — `stable`
 
-A protocol-agnostic fetch-and-transform layer. Wraps any command that retrieves data. Encodes all readable files to `.dna` format in place. Preserves directory structure exactly. The transformed repository can be pushed to GitHub, hosted anywhere, fetched by anyone — and appears to contain genomics data.
+A protocol-agnostic fetch-and-transform layer. Wraps any shell command that produces files. Encodes all readable files to `.dna` format in place, preserving directory structure exactly. The transformed repository can be pushed to GitHub, hosted anywhere, fetched by anyone — and appears to contain genomics data.
 
 ```bash
+dendec wrap -e ./myproject
+dendec wrap -d ./myproject
 dendec wrap -e git clone https://github.com/user/repo
-dendec wrap -e curl https://example.com/config.rs
 dendec wrap -d git clone https://github.com/user/repo
-dendec wrap -d curl https://example.com/config.rs.dna
+dendec wrap -e curl -o config.toml https://example.com/config.toml
+dendec wrap -d curl -o config.toml.dna https://example.com/config.toml.dna
 ```
 
 The `.dna` extension is the complete protocol. Any observer sees file annotations that look like biology research artifacts.
@@ -317,8 +498,8 @@ The `.dna` extension is the complete protocol. Any observer sees file annotation
 The most architecturally significant layer. Instead of transmitting DNA bases, transmit coordinates into public genome databases. The bases themselves are never present in the message. They exist latent inside the sequenced genomes of real organisms — distributed across decades of publicly funded biology research — and are reconstructable only by someone who knows the correct coordinates and holds the correct password.
 
 ```bash
-dendec refer encode output.dna      # DNA bases to genomic coordinate references
-dendec refer decode references.txt  # Fetch genome slices, reconstruct, decrypt
+dendec refer encode output.dna      # DNA bases → genomic coordinate references
+dendec refer decode references.txt  # fetch genome slices → reconstruct → decrypt
 ```
 
 An intercepted `references.txt` is indistinguishable from a researcher's genomic annotation notes.
@@ -331,27 +512,29 @@ An intercepted `references.txt` is indistinguishable from a researcher's genomic
 
 ### Near term
 
-- [ ] `--file` flag — binary-safe file encode and decode without shell substitution
-- [ ] `--output` flag — write result directly to a file instead of stdout
-- [ ] Trailing newline preservation in file mode
-- [ ] Richer terminal output — input size, output length, base statistics, elapsed time
+- [x] `--file` flag — binary-safe file encode and decode
+- [x] `--as` flag — write output directly to a named file
+- [x] Exact byte preservation including trailing newlines and binary content
 - [ ] `--quiet` flag — suppress all stderr output for scripting
+- [ ] Richer terminal output — input size, output length, base count, elapsed time
 
 ### dendec wrap
 
-- [ ] `dendec wrap -e <command>` — encode all readable files from any fetch command
-- [ ] `dendec wrap -d <command>` — decode all `.dna` files from any fetch command
-- [ ] Git repository support with full directory structure preservation
-- [ ] curl and wget single-file support
-- [ ] Binary file detection via byte sampling — non-text files skipped automatically
-- [ ] `.git/` directory exclusion
-- [ ] Progress indication for multi-file operations
-- [ ] Summary report — file count, total size, elapsed time
+- [x] Local directory transform — `dendec wrap -e ./dir`
+- [x] Git repository support — `dendec wrap -e git clone <url>`
+- [x] curl and wget support — disk and stdout modes
+- [x] Binary file detection via content sampling
+- [x] `.git/`, `target/`, `node_modules/` exclusion
+- [x] Per-file progress reporting with sizes
+- [x] Summary report — transformed, skipped, failed
+- [ ] `--quiet` flag for scripting and CI
+- [ ] `--dry-run` — show what would be transformed without doing it
+- [ ] Elapsed time in summary report
 
 ### Compression
 
 - [ ] `--compress` flag — zstd compression applied before encryption
-- [ ] Compression flag stored in binary header
+- [ ] Compression flag stored in binary header version field
 - [ ] Compression ratio reported on encode
 
 ### Security hardening
@@ -383,7 +566,7 @@ An intercepted `references.txt` is indistinguishable from a researcher's genomic
 
 ## &#xe838; Contributing
 
-dendec is in active early development. The core is stable and fully tested. `wrap` is the next milestone.
+dendec is in active early development. The core and wrap layers are stable and fully tested. `refer` is the next milestone.
 
 The binary header format is versioned. Any future version of dendec will maintain backward compatibility with sequences encoded by v1. If you are building tooling on top of dendec, the header layout and magic bytes are stable.
 

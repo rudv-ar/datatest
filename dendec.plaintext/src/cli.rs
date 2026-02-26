@@ -1,3 +1,4 @@
+/// cli.rs — dendec command-line interface
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -81,4 +82,36 @@ pub enum Command {
         #[arg(trailing_var_arg = true, required = true)]
         command: Vec<String>,
     },
+
+    /// Convert a .dna file to a genomic coordinate BED file, or back
+    ///
+    /// refer is a steganographic transport layer. It replaces the raw DNA
+    /// bases in a dendec-encoded file with coordinates pointing to real
+    /// locations in the human reference genome (hg38). The output is a
+    /// standard BED file indistinguishable from routine genomics annotation.
+    ///
+    /// The operation is fully offline — all coordinate translation uses
+    /// an embedded lookup table compiled into the dendec binary.
+    ///
+    /// Examples:
+    ///   dendec refer -r --from secret.pdf.dna --to annotation_batch7.bed
+    ///   dendec refer -u --from annotation_batch7.bed --to secret.pdf.dna
+    Refer {
+        /// Refer mode — convert .dna to a genomic coordinate BED file
+        #[arg(short = 'r', long = "refer")]
+        refer: bool,
+
+        /// Unrefer mode — reconstruct .dna from a genomic coordinate BED file
+        #[arg(short = 'u', long = "unrefer")]
+        unrefer: bool,
+
+        /// Input file path (.dna for -r, .bed for -u)
+        #[arg(long, value_name = "PATH")]
+        from: PathBuf,
+
+        /// Output file path (.bed for -r, .dna for -u)
+        #[arg(long, value_name = "PATH")]
+        to: PathBuf,
+    },
 }
+

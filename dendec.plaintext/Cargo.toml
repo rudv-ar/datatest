@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "tools/build_table"]
+
 [package]
 name = "dendec"
 version = "0.1.0"

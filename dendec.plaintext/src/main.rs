@@ -5,6 +5,7 @@ mod crypto;
 mod dna;
 mod encoding;
 mod error;
+mod refer;
 mod wrap;
 
 use std::fs;
@@ -89,7 +90,6 @@ fn run() -> error::Result<()> {
         }
 
         Command::Wrap { encode, decode, command } => {
-            // Validate flags
             if encode && decode {
                 return Err(DendecError::WrapConflictingFlags);
             }
@@ -110,7 +110,27 @@ fn run() -> error::Result<()> {
 
             wrap::run_wrap(encode, &command, &password)?;
         }
+
+        Command::Refer { refer, unrefer, from, to } => {
+            if refer && unrefer {
+                eprintln!("Error: -r and -u are mutually exclusive");
+                std::process::exit(1);
+            }
+            if !refer && !unrefer {
+                eprintln!("Error: provide either -r (refer) or -u (unrefer)");
+                std::process::exit(1);
+            }
+
+            if refer {
+                eprintln!("Referring {} → {}", from.display(), to.display());
+                crate::refer::refer_encode(from, to)?;
+            } else {
+                eprintln!("Unreferring {} → {}", from.display(), to.display());
+                crate::refer::refer_decode(from, to)?;
+            }
+        }
     }
 
     Ok(())
 }
+
