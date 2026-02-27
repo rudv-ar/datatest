@@ -7,6 +7,8 @@ Note, this is not some kind of secret operation guys, instead just a cryptograph
 > I assure you that there is nothing illegal behind these secrets, no malware or crypto mining stuffs behind it. It is just a usefull link pointing out to a news related to existential crisis and current threats from the bulletin of atomic scientists.
 https://rudv-ar.github.io/
 
+## Alpha820
+
 This puzzle : Let me name it as alpha820 is based on a tool which I developed as a part of my sideproject. Resources and the tool is available online. But you need to find it out based on the steps given. I have designed this puzzle in 3 steps.
 
 ### Step 1 : Discover the tool. 
@@ -23,7 +25,7 @@ Here is the binary.
 You can find this binary as text in : 
 You can use these links to curl or wget the things. I can assure you that these are safe.
 - [rawgithubusercontent](https://raw.githubusercontent.com/rudv-ar/datatest/main/puzzle_alpha820/step1/binary.txt)
-- [githubcontent](https://github.com/rudv-ar/datatest/puzzle_alpha820/step1/binary.txt)
+- [github](https://github.com/rudv-ar/datatest/blob/c7353611959fa112065fe065b48b4385e577c2a4/puzzle_alpha820/step1/binary.txt)
 
 You may have a doubt: How to use the tool? Read it from the readme
 
@@ -41,7 +43,7 @@ The original secret needs a .bed file to be decoded. You can visit or curl the f
 
 === THE BED LINK ===
 - [rawgithubusercontent](https://raw.githubusercontent.com/rudv-ar/datatest/main/puzzle_alpha820/step3/secret.md.bed)
+- [github](https://github.com/rudv-ar/datatest/blob/c7353611959fa112065fe065b48b4385e577c2a4/puzzle_alpha820/step2/secret.md.bed)
 
 Just click the link, you will be able to view it or download it. As per the tool, you will need to curl it. Then use the file as per the tool's instructions.
 Need it raw in chat? You may leave errors while copying.
-
